@@ -1,7 +1,14 @@
-import '../global.css';
+import '../global.css'
 
-import { Stack } from 'expo-router';
+import { Stack } from 'expo-router'
+import { useEffect } from 'react'
+
+import { enableImmersiveMode } from '../modules/immersiveMode'
 
 export default function Layout() {
-  return <Stack />;
+  useEffect(() => {
+    enableImmersiveMode()
+  }, [])
+
+  return <Stack screenOptions={{ headerShown: false }} />
 }

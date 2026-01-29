@@ -3,9 +3,8 @@
     "name": "display-anuncios",
     "slug": "display-anuncios",
     "version": "1.0.0",
-
     "scheme": "display-anuncios",
-    "platforms": ["ios", "android"],
+    "platforms": ["android"],
     "web": {
       "bundler": "metro",
       "output": "static",
@@ -14,29 +13,23 @@
     "plugins": ["expo-router"],
     "experiments": {
       "typedRoutes": true,
-
       "tsconfigPaths": true
     },
-
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-
     "userInterfaceStyle": "light",
-
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": ["**/*"],
-    "ios": {
-      "supportsTablet": true
-    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.enzo.llsant1.displayanuncios"
     }
   }
 }
