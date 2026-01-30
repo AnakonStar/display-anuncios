@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.KeyEvent
 import android.widget.EditText
 import android.app.AlertDialog
+import androidx.core.view.WindowCompat
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
@@ -28,7 +29,9 @@ class MainActivity : ReactActivity() {
     // This is required for expo-splash-screen.
     setTheme(R.style.AppTheme)
     super.onCreate(null)
+    WindowCompat.setDecorFitsSystemWindows(window, false)
     ImmersiveModeHelper.enableStickyImmersive(this)
+    ImmersiveModeHelper.enforcePersistentImmersive(this)
 
     adminComponent = ComponentName(this, DeviceAdminReceiver::class.java)
     KioskManager.enableKiosk(this, adminComponent)
@@ -101,10 +104,19 @@ class MainActivity : ReactActivity() {
       .setTitle("Senha")
       .setView(input)
       .setPositiveButton("OK") { _, _ ->
-        KioskManager.exitKiosk(this, input.text.toString())
+        val ok = KioskManager.exitKiosk(this, input.text.toString())
+        if (ok) {
+          stopWatchdog()
+          finishAndRemoveTask()
+        }
       }
       .setNegativeButton("Cancelar", null)
       .show()
+  }
+
+  private fun stopWatchdog() {
+    val intent = Intent(this, WatchdogService::class.java)
+    stopService(intent)
   }
 
   private fun startWatchdog() {

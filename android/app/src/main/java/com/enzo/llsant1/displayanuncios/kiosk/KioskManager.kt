@@ -36,8 +36,8 @@ object KioskManager {
         }
     }
 
-    fun exitKiosk(activity: Activity, password: String) {
-        if (password != EXIT_PASSWORD) return
+    fun exitKiosk(activity: Activity, password: String): Boolean {
+        if (password != EXIT_PASSWORD) return false
 
         val dpm = activity.getSystemService(DevicePolicyManager::class.java)
         val admin = ComponentName(activity, com.enzo.llsant1.displayanuncios.DeviceAdminReceiver::class.java)
@@ -48,11 +48,7 @@ object KioskManager {
             Log.w(TAG, "stopLockTask failed", e)
         }
 
-        try {
-            dpm.setStatusBarDisabled(admin, false)
-        } catch (e: SecurityException) {
-            Log.w(TAG, "Unable to re-enable status bar", e)
-        }
+        return true
     }
 
     private fun blockStatusBar(dpm: DevicePolicyManager, admin: ComponentName) {
