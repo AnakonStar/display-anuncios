@@ -48,6 +48,20 @@ object KioskManager {
             Log.w(TAG, "stopLockTask failed", e)
         }
 
+        try {
+            dpm.setStatusBarDisabled(admin, false)
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Unable to re-enable status bar", e)
+        }
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                dpm.setKeyguardDisabled(admin, false)
+            }
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Unable to re-enable keyguard", e)
+        }
+
         return true
     }
 

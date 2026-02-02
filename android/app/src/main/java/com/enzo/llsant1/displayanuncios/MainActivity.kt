@@ -2,6 +2,10 @@ package com.enzo.llsant1.displayanuncios
 
 import android.content.ComponentName
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
@@ -23,6 +27,12 @@ import com.enzo.llsant1.displayanuncios.modules.wifi.WifiHelper
 class MainActivity : ReactActivity() {
 
   private lateinit var adminComponent: ComponentName
+  private var connectivityManager: ConnectivityManager? = null
+  private var networkCallback: ConnectivityManager.NetworkCallback? = null
+  private var waitingForWifi = false
+  private var hasShownConnectPrompt = false
+  private var stoppedWatchdogForWifi = false
+  private var navigatingToWifiSettings = false
 
   override fun onCreate(savedInstanceState: Bundle?) {
     // Set the theme to AppTheme BEFORE onCreate to support
@@ -35,6 +45,7 @@ class MainActivity : ReactActivity() {
     ImmersiveModeHelper.enforcePersistentImmersive(this)
 
     adminComponent = ComponentName(this, DeviceAdminReceiver::class.java)
+    connectivityManager = getSystemService(ConnectivityManager::class.java)
     KioskManager.enableKiosk(this, adminComponent)
     startWatchdog()
     ensureWifiConnected()
@@ -43,6 +54,13 @@ class MainActivity : ReactActivity() {
   override fun onResume() {
     super.onResume()
     KioskManager.enableKiosk(this, adminComponent)
+    if (stoppedWatchdogForWifi) {
+      startWatchdog()
+      stoppedWatchdogForWifi = false
+    }
+    if (navigatingToWifiSettings) {
+      navigatingToWifiSettings = false
+    }
     ensureWifiConnected()
   }
 
@@ -118,9 +136,81 @@ class MainActivity : ReactActivity() {
   }
 
   private fun ensureWifiConnected() {
-    if (!WifiHelper.isConnectedToWifi(this)) {
-      WifiHelper.openWifiSettings(this)
+    if (WifiHelper.isConnectedToWifi(this)) {
+      hasShownConnectPrompt = false
+      return
     }
+
+    promptOpenWifiSettings()
+    startWaitingForWifi()
+  }
+
+  fun requestWifiPromptFromJs() {
+    // Allow showing the prompt again when explicitly requested by the JS retry button.
+    hasShownConnectPrompt = false
+    ensureWifiConnected()
+  }
+
+  private fun promptOpenWifiSettings() {
+    if (hasShownConnectPrompt) return
+    hasShownConnectPrompt = true
+    AlertDialog.Builder(this)
+      .setTitle("Conectar")
+      .setMessage("É necessário uma conexão com a internet para prosseguir.")
+      .setPositiveButton("Conectar") { _, _ ->
+        stoppedWatchdogForWifi = true
+        navigatingToWifiSettings = true
+        stopWatchdog()
+        WifiHelper.openWifiSettings(this)
+      }
+      .setNegativeButton("Cancelar", null)
+      .show()
+  }
+
+  private fun startWaitingForWifi() {
+    if (waitingForWifi) return
+    waitingForWifi = true
+
+    val request = NetworkRequest.Builder()
+      .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+      .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+      .build()
+
+    val callback = object : ConnectivityManager.NetworkCallback() {
+      override fun onAvailable(network: Network) {
+        evaluateNetwork(network)
+      }
+
+      override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+        evaluateNetwork(network)
+      }
+    }
+
+    connectivityManager?.registerNetworkCallback(request, callback)
+    networkCallback = callback
+  }
+
+  private fun evaluateNetwork(network: Network) {
+    val cm = connectivityManager ?: return
+    val capabilities = cm.getNetworkCapabilities(network) ?: return
+    val isValidated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    if (isValidated) {
+      runOnUiThread { handleStableConnection() }
+    }
+  }
+
+  private fun handleStableConnection() {
+    if (!waitingForWifi) return
+    waitingForWifi = false
+    hasShownConnectPrompt = false
+    unregisterNetworkCallback()
+    restartApp()
+  }
+
+  private fun unregisterNetworkCallback() {
+    val callback = networkCallback ?: return
+    connectivityManager?.unregisterNetworkCallback(callback)
+    networkCallback = null
   }
 
   private fun stopWatchdog() {
@@ -135,5 +225,17 @@ class MainActivity : ReactActivity() {
     } else {
       startService(intent)
     }
+  }
+
+  private fun restartApp() {
+    val launchIntent = packageManager.getLaunchIntentForPackage(packageName) ?: return
+    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+    startActivity(launchIntent)
+    finish()
+  }
+
+  override fun onDestroy() {
+    unregisterNetworkCallback()
+    super.onDestroy()
   }
 }

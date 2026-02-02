@@ -29,4 +29,18 @@ object WifiHelper {
         }
         activity.startActivity(intent)
     }
+
+    fun isInternetValidated(context: Context): Boolean {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return false
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val activeNetwork = cm.activeNetwork ?: return false
+            val capabilities = cm.getNetworkCapabilities(activeNetwork) ?: return false
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        } else {
+            @Suppress("DEPRECATION")
+            cm.activeNetworkInfo?.isConnected == true
+        }
+    }
 }
