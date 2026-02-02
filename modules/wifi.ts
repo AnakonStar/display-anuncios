@@ -8,19 +8,19 @@ const { WifiManager } = NativeModules as {
   }
 }
 
-export function openWifiSettings() {
+function openSettings() {
   if (Platform.OS !== 'android') return
 
   WifiManager?.openWifiSettings?.()
 }
 
-export function promptWifiConnect() {
+function promptConnect() {
   if (Platform.OS !== 'android') return
 
   WifiManager?.promptWifiConnect?.()
 }
 
-export async function checkInternetStatus(): Promise<boolean> {
+async function checkInternetStatus(): Promise<boolean> {
   if (Platform.OS !== 'android') return true
 
   try {
@@ -29,4 +29,10 @@ export async function checkInternetStatus(): Promise<boolean> {
   } catch (e) {
     return false
   }
+}
+
+export const WifiService = {
+  openSettings,
+  promptConnect,
+  checkInternetStatus,
 }
