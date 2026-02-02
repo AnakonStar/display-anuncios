@@ -18,6 +18,7 @@ import expo.modules.ReactActivityDelegateWrapper
 import com.enzo.llsant1.displayanuncios.modules.immersive.ImmersiveModeHelper
 import com.enzo.llsant1.displayanuncios.kiosk.KioskManager
 import com.enzo.llsant1.displayanuncios.kiosk.WatchdogService
+import com.enzo.llsant1.displayanuncios.modules.wifi.WifiHelper
 
 class MainActivity : ReactActivity() {
 
@@ -36,11 +37,13 @@ class MainActivity : ReactActivity() {
     adminComponent = ComponentName(this, DeviceAdminReceiver::class.java)
     KioskManager.enableKiosk(this, adminComponent)
     startWatchdog()
+    ensureWifiConnected()
   }
 
   override fun onResume() {
     super.onResume()
     KioskManager.enableKiosk(this, adminComponent)
+    ensureWifiConnected()
   }
 
   /**
@@ -112,6 +115,12 @@ class MainActivity : ReactActivity() {
       }
       .setNegativeButton("Cancelar", null)
       .show()
+  }
+
+  private fun ensureWifiConnected() {
+    if (!WifiHelper.isConnectedToWifi(this)) {
+      WifiHelper.openWifiSettings(this)
+    }
   }
 
   private fun stopWatchdog() {
