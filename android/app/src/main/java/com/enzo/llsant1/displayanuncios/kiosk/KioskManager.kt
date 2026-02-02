@@ -13,25 +13,24 @@ object KioskManager {
     private const val TAG = "KIOSK_MANAGER"
     private const val EXIT_PASSWORD = "1234" // TODO: customize your exit password
 
-    fun enableKiosk(activity: Activity, admin: ComponentName) {
+    fun enableKiosk(activity: Activity, admin: ComponentName? = null) {
         val dpm = activity.getSystemService(DevicePolicyManager::class.java)
 
-        if (!dpm.isDeviceOwnerApp(activity.packageName)) {
-            Log.w(TAG, "App is not device owner; kiosk not enabled")
-            return
+        val hasDeviceOwner = admin != null && dpm?.isDeviceOwnerApp(activity.packageName) == true
+
+        if (hasDeviceOwner && dpm != null && admin != null) {
+            dpm.setLockTaskPackages(admin, arrayOf(activity.packageName, "com.android.settings"))
+
+            blockStatusBar(dpm, admin)
+            disableKeyguard(dpm, admin)
+            addSafeBootRestriction(dpm, admin)
         }
-
-        dpm.setLockTaskPackages(admin, arrayOf(activity.packageName, "com.android.settings"))
-
-        blockStatusBar(dpm, admin)
-        disableKeyguard(dpm, admin)
-        addSafeBootRestriction(dpm, admin)
 
         if (!isInLockTaskMode(activity)) {
             try {
                 activity.startLockTask()
-            } catch (e: IllegalStateException) {
-                Log.e(TAG, "Unable to start lock task", e)
+            } catch (e: Exception) {
+                Log.w(TAG, "startLockTask not allowed; relying on accessibility watchdog", e)
             }
         }
     }
@@ -41,6 +40,7 @@ object KioskManager {
 
         val dpm = activity.getSystemService(DevicePolicyManager::class.java)
         val admin = ComponentName(activity, com.enzo.llsant1.displayanuncios.DeviceAdminReceiver::class.java)
+        val hasDeviceOwner = dpm?.isDeviceOwnerApp(activity.packageName) == true
 
         try {
             activity.stopLockTask()
@@ -48,18 +48,20 @@ object KioskManager {
             Log.w(TAG, "stopLockTask failed", e)
         }
 
-        try {
-            dpm.setStatusBarDisabled(admin, false)
-        } catch (e: SecurityException) {
-            Log.w(TAG, "Unable to re-enable status bar", e)
-        }
-
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                dpm.setKeyguardDisabled(admin, false)
+        if (hasDeviceOwner) {
+            try {
+                dpm?.setStatusBarDisabled(admin, false)
+            } catch (e: SecurityException) {
+                Log.w(TAG, "Unable to re-enable status bar", e)
             }
-        } catch (e: SecurityException) {
-            Log.w(TAG, "Unable to re-enable keyguard", e)
+
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    dpm?.setKeyguardDisabled(admin, false)
+                }
+            } catch (e: SecurityException) {
+                Log.w(TAG, "Unable to re-enable keyguard", e)
+            }
         }
 
         return true

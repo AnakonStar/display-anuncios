@@ -1,5 +1,6 @@
 package com.enzo.llsant1.displayanuncios
 
+import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Intent
 import android.net.ConnectivityManager
@@ -10,7 +11,6 @@ import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import android.widget.EditText
-import android.app.AlertDialog
 import androidx.core.view.WindowCompat
 
 import com.facebook.react.ReactActivity
@@ -109,6 +109,10 @@ class MainActivity : ReactActivity() {
     if (hasFocus) {
       ImmersiveModeHelper.enableStickyImmersive(this)
     }
+  }
+
+  override fun onBackPressed() {
+    // Ignore back to avoid leaving the kiosk accidentally; exit is gated by the password flow.
   }
 
   override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
